@@ -433,8 +433,16 @@ func (s *PredicateSuite) TestEquals() {
 	s.False(pr.(BoolPredicate)())
 }
 
+type TestEmbedStruct struct {
+	EmbedParam struct {
+		EmbedKey1 map[string][]string `json:"embed_key1,omitempty"`
+		EmbedKey2 map[string]string   `json:"embed_key2,omitempty"`
+	} `json:"embed_param,omitempty"`
+}
+
 // TestStruct is a test structure with json tags.
 type TestStruct struct {
+	TestEmbedStruct
 	Param struct {
 		Key1 map[string][]string `json:"key1,omitempty"`
 		Key2 map[string]string   `json:"key2,omitempty"`
@@ -444,6 +452,7 @@ type TestStruct struct {
 func (s *PredicateSuite) TestGetTagField() {
 	val := TestStruct{}
 	val.Param.Key1 = map[string][]string{"key": {"val"}}
+	val.EmbedParam.EmbedKey1 = map[string][]string{"embed-key": {"embed-val"}}
 
 	type testCase struct {
 		tag    string
@@ -461,6 +470,12 @@ func (s *PredicateSuite) TestGetTagField() {
 		{tag: "json", val: &val, fields: []string{"param", "key3"}, err: trace.NotFound("not found")},
 		// nil pointer
 		{tag: "json", val: nil, fields: []string{"param", "key1"}, err: trace.BadParameter("bad param")},
+
+		// embedded field test equivalent
+		{tag: "json", val: val, fields: []string{"embed_param", "embed_key1"}, expect: val.EmbedParam.EmbedKey1},
+		{tag: "json", val: &val, fields: []string{"embed_param", "embed_key1"}, expect: val.EmbedParam.EmbedKey1},
+		{tag: "json", val: &val, fields: []string{"embed_param", "embed_key3"}, err: trace.NotFound("not found")},
+		{tag: "json", val: nil, fields: []string{"embed_param", "embed_key1"}, err: trace.BadParameter("bad param")},
 	}
 
 	for i, tc := range testCases {

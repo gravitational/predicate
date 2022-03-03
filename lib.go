@@ -148,6 +148,15 @@ func GetFieldByTag(ival interface{}, tagName string, fieldNames []string) (inter
 	for i := 0; i < valType.NumField(); i++ {
 		tagValue := valType.Field(i).Tag.Get(tagName)
 
+		// If it's an embedded field, traverse it.
+		if tagValue == "" && valType.Field(i).Anonymous {
+			value := val.Field(i).Interface()
+			val, err := GetFieldByTag(value, tagName, fieldNames)
+			if err == nil {
+				return val, nil
+			}
+		}
+
 		parts := strings.Split(tagValue, ",")
 		if parts[0] == fieldName {
 			value := val.Field(i).Interface()
