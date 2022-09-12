@@ -60,11 +60,14 @@ Here's an example of fully functional predicate language to deal with division r
 */
 package predicate
 
-// Def contains supported operators (e.g. LT, GT) and functions passed in as a map.
+// Def defines parser context including supported operators, functions, methods,
+// identifiers, and property accessors.
 type Def struct {
 	Operators Operators
 	// Function matching is case sensitive, e.g. Len is different from len
 	Functions map[string]interface{}
+	// Methods is a map of method names to their implementation.
+	Methods map[string]interface{}
 	// GetIdentifier returns value of any identifier passed in
 	// in the form []string{"id", "field", "subfield"}
 	GetIdentifier GetIdentifierFn

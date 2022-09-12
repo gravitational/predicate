@@ -137,17 +137,12 @@ func (p *predicateParser) evaluateExpr(n ast.Expr) (interface{}, error) {
 		return val, nil
 
 	case *ast.CallExpr:
-		name, err := getIdentifier(l.Fun)
+		fn, args, err := p.getFunctionAndArgs(l)
 		if err != nil {
-			return nil, err
+			return nil, trace.Wrap(err)
 		}
 
-		fn, err := p.getFunction(name)
-		if err != nil {
-			return nil, err
-		}
-
-		arguments, err := p.evaluateArguments(l.Args)
+		arguments, err := p.evaluateArguments(args)
 		if err != nil {
 			return nil, err
 		}
@@ -221,21 +216,35 @@ func (p *predicateParser) getJoinFunction(op token.Token) (interface{}, error) {
 	return fn, nil
 }
 
-func getIdentifier(node ast.Node) (string, error) {
-	sexpr, ok := node.(*ast.SelectorExpr)
-	if ok {
-		id, okIdent := sexpr.X.(*ast.Ident)
-		if !okIdent {
-			return "", trace.BadParameter("expected selector identifier, got: %T", sexpr.X)
-		}
-		return fmt.Sprintf("%s.%s", id.Name, sexpr.Sel.Name), nil
-	}
+func (p *predicateParser) getFunctionAndArgs(callExpr *ast.CallExpr) (interface{}, []ast.Expr, error) {
+	switch f := callExpr.Fun.(type) {
+	case *ast.Ident:
+		// Plain function with a single identifier name.
+		fn, err := p.getFunction(f.Name)
+		return fn, callExpr.Args, trace.Wrap(err)
+	case *ast.SelectorExpr:
+		// This is a selector like number.DivisibleBy(2) or set("a", "b").contains("b")
 
-	id, ok := node.(*ast.Ident)
-	if !ok {
-		return "", trace.BadParameter("expected identifier, got: %T", node)
+		// First, check if we have a matching registered method.
+		method, haveMethod := p.d.Methods[f.Sel.Name]
+		if haveMethod {
+			// Pass the method receiver as the first arg, it will first be
+			// evaluated with the rest of the arguments
+			args := append([]ast.Expr{f.X}, callExpr.Args...)
+			return method, args, nil
+		}
+
+		// If this isn't a method, it may be a module function like "number.DivisibleBy"
+		id, okIdent := f.X.(*ast.Ident)
+		if !okIdent {
+			return nil, nil, trace.BadParameter("expected selector identifier, got: %T", f.X)
+		}
+		fnName := fmt.Sprintf("%s.%s", id.Name, f.Sel.Name)
+		fn, err := p.getFunction(fnName)
+		return fn, callExpr.Args, trace.Wrap(err)
+	default:
+		return nil, nil, trace.BadParameter("unknown function type %T", f)
 	}
-	return id.Name, nil
 }
 
 func literalToValue(a *ast.BasicLit) (interface{}, error) {
