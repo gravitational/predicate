@@ -60,27 +60,8 @@ func (p *predicateParser) parse(expr ast.Expr) (interface{}, error) {
 
 		return callFunction(joinFn, []interface{}{node})
 
-	default:
-		return p.evaluateExpr(n)
-	}
-}
-
-func (p *predicateParser) evaluateArguments(nodes []ast.Expr) ([]interface{}, error) {
-	out := make([]interface{}, len(nodes))
-	for i, n := range nodes {
-		val, err := p.evaluateExpr(n)
-		if err != nil {
-			return nil, trace.Wrap(err)
-		}
-		out[i] = val
-	}
-	return out, nil
-}
-
-func (p *predicateParser) evaluateExpr(n ast.Expr) (interface{}, error) {
-	switch l := n.(type) {
 	case *ast.BasicLit:
-		val, err := literalToValue(l)
+		val, err := literalToValue(n)
 		if err != nil {
 			return nil, err
 		}
@@ -92,12 +73,12 @@ func (p *predicateParser) evaluateExpr(n ast.Expr) (interface{}, error) {
 			return nil, trace.NotFound("properties are not supported")
 		}
 
-		mapVal, err := p.evaluateExpr(l.X)
+		mapVal, err := p.parse(n.X)
 		if err != nil {
 			return nil, trace.Wrap(err)
 		}
 
-		keyVal, err := p.evaluateExpr(l.Index)
+		keyVal, err := p.parse(n.Index)
 		if err != nil {
 			return nil, trace.Wrap(err)
 		}
@@ -110,7 +91,7 @@ func (p *predicateParser) evaluateExpr(n ast.Expr) (interface{}, error) {
 		return val, nil
 
 	case *ast.SelectorExpr:
-		fields, err := evaluateSelector(l, []string{})
+		fields, err := evaluateSelector(n, []string{})
 		if err != nil {
 			return nil, trace.Wrap(err)
 		}
@@ -127,17 +108,17 @@ func (p *predicateParser) evaluateExpr(n ast.Expr) (interface{}, error) {
 
 	case *ast.Ident:
 		if p.d.GetIdentifier == nil {
-			return nil, trace.NotFound("%v is not defined", l.Name)
+			return nil, trace.NotFound("%v is not defined", n.Name)
 		}
 
-		val, err := p.d.GetIdentifier([]string{l.Name})
+		val, err := p.d.GetIdentifier([]string{n.Name})
 		if err != nil {
 			return nil, trace.Wrap(err)
 		}
 		return val, nil
 
 	case *ast.CallExpr:
-		fn, args, err := p.getFunctionAndArgs(l)
+		fn, args, err := p.getFunctionAndArgs(n)
 		if err != nil {
 			return nil, trace.Wrap(err)
 		}
@@ -150,8 +131,20 @@ func (p *predicateParser) evaluateExpr(n ast.Expr) (interface{}, error) {
 		return callFunction(fn, arguments)
 
 	default:
-		return nil, trace.BadParameter("%T is not supported", n)
+		return nil, trace.BadParameter("%T is not supported", expr)
 	}
+}
+
+func (p *predicateParser) evaluateArguments(nodes []ast.Expr) ([]interface{}, error) {
+	out := make([]interface{}, len(nodes))
+	for i, n := range nodes {
+		val, err := p.parse(n)
+		if err != nil {
+			return nil, trace.Wrap(err)
+		}
+		out[i] = val
+	}
+	return out, nil
 }
 
 // evaluateSelector recursively evaluates the selector field and returns a list
