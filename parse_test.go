@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/gravitational/trace"
+	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -599,4 +600,99 @@ func numberNEQ(m numberMapper, value int) numberPredicate {
 
 func stringLength(v string) int {
 	return len(v)
+}
+
+func TestNestedExpressions(t *testing.T) {
+	t.Parallel()
+
+	p, err := NewParser(Def{
+		Operators: Operators{
+			AND: And,
+			OR:  Or,
+			NOT: Not,
+		},
+		Functions: map[string]interface{}{
+			"fnreturn": func(arg interface{}) interface{} {
+				return arg
+			},
+		},
+		GetIdentifier: func(fields []string) (interface{}, error) {
+			if len(fields) != 1 {
+				return nil, fmt.Errorf("identifier with multiple fields unsupported")
+			}
+			switch fields[0] {
+			case "true":
+				return func() bool { return true }, nil
+			case "false":
+				return func() bool { return false }, nil
+			case "opposite":
+				return map[bool]bool{
+					false: true,
+					true:  false,
+				}, nil
+			default:
+				return nil, fmt.Errorf("identifier %q not found", fields[0])
+			}
+		},
+		GetProperty: func(mapVal, keyVal interface{}) (interface{}, error) {
+			m, ok := mapVal.(map[bool]bool)
+			if !ok {
+				return nil, fmt.Errorf("only map[bool]bool is supported for this test, got %T", mapVal)
+			}
+			k, ok := keyVal.(BoolPredicate)
+			if !ok {
+				return nil, fmt.Errorf("only boolean predicates are supported as keys for this test, got %T", keyVal)
+			}
+			return m[k()], nil
+		},
+	})
+	require.NoError(t, err)
+
+	for _, tc := range []struct {
+		desc     string
+		expr     string
+		expected interface{}
+	}{
+		{
+			desc:     "unary expr as arg",
+			expr:     `fnreturn(!false)`,
+			expected: true,
+		},
+		{
+			desc:     "binary expr as arg",
+			expr:     `fnreturn(true || false)`,
+			expected: true,
+		},
+		{
+			desc:     "paren expr as arg",
+			expr:     `fnreturn(false || (true && false) || fnreturn((false)))`,
+			expected: false,
+		},
+		{
+			desc:     "unary expr as index",
+			expr:     `opposite[!true]`,
+			expected: true,
+		},
+		{
+			desc:     "binary expr as index",
+			expr:     `opposite[true || false]`,
+			expected: false,
+		},
+		{
+			desc:     "paren expr as index",
+			expr:     `opposite[(true && false)]`,
+			expected: true,
+		},
+	} {
+		t.Run(tc.desc, func(t *testing.T) {
+			result, err := p.Parse(tc.expr)
+			require.NoError(t, err)
+
+			if pred, ok := result.(BoolPredicate); ok {
+				result = pred()
+			}
+
+			require.Equal(t, tc.expected, result)
+		})
+	}
 }
