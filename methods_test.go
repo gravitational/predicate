@@ -14,7 +14,7 @@ func TestMethods(t *testing.T) {
 		Functions: map[string]interface{}{
 			"set":    newSet,
 			"list":   newList,
-			"append": fn_append,
+			"append": customAppend,
 		},
 		Methods: map[string]interface{}{
 			"add":      set.add,
@@ -102,8 +102,6 @@ func TestMethods(t *testing.T) {
 			require.Equal(t, tc.expectOutput, output)
 		})
 	}
-
-	return
 }
 
 // set is an example set type used to demonstrate use of methods.
@@ -157,6 +155,6 @@ type container interface {
 	contains(str string) bool
 }
 
-func fn_append(l list, str string) list {
+func customAppend(l list, str string) list {
 	return append(append([]string{}, l...), str)
 }

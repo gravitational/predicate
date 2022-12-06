@@ -68,8 +68,8 @@ type Def struct {
 	Functions map[string]interface{}
 	// Methods is a map of method names to their implementation.
 	Methods map[string]interface{}
-	// GetIdentifier returns value of any identifier passed in
-	// in the form []string{"id", "field", "subfield"}
+	// GetIdentifier returns value of any identifier passed in the form
+	// []string{"id", "field", "subfield"}
 	GetIdentifier GetIdentifierFn
 	// GetProperty returns property from a map
 	GetProperty GetPropertyFn
