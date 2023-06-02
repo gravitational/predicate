@@ -136,6 +136,15 @@ func GetFieldByTag(ival interface{}, tagName string, fieldNames []string) (inter
 		return i, nil
 	}
 
+	// We use notFoundError instead of [trace.NotFoundError] within the
+	// recursive getFieldByTag function as an optimization since each call
+	// to [trace.NotFound] results in capturing the current stack trace.
+	// This is particularly important given how many incorrect branches we
+	// may have to take before we land on the correct path to the field.
+	// In order to prevent breaking any consumers of this library we still
+	// must however convert a notFoundError into a [trace.NotFoundError].
+	//
+	// See https://github.com/gravitational/teleport/issues/27228.
 	var nfe *notFoundError
 	if errors.As(err, &nfe) {
 		return nil, trace.NotFound(nfe.Error())
