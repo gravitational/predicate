@@ -17,6 +17,8 @@ limitations under the License.
 package predicate
 
 import (
+	"errors"
+	"fmt"
 	"reflect"
 	"strings"
 
@@ -129,6 +131,28 @@ func Not(a BoolPredicate) BoolPredicate {
 
 // GetFieldByTag returns a field from the object based on the tag.
 func GetFieldByTag(ival interface{}, tagName string, fieldNames []string) (interface{}, error) {
+	i, err := getFieldByTag(ival, tagName, fieldNames)
+	if err == nil {
+		return i, nil
+	}
+
+	var nfe *notFoundError
+	if errors.As(err, &nfe) {
+		return nil, trace.NotFound(nfe.Error())
+	}
+
+	return nil, trace.Wrap(err)
+}
+
+type notFoundError struct {
+	fieldNames []string
+}
+
+func (n notFoundError) Error() string {
+	return fmt.Sprintf("field name %v is not found", strings.Join(n.fieldNames, "."))
+}
+
+func getFieldByTag(ival interface{}, tagName string, fieldNames []string) (interface{}, error) {
 	if len(fieldNames) == 0 {
 		return nil, trace.BadParameter("missing field names")
 	}
@@ -139,7 +163,7 @@ func GetFieldByTag(ival interface{}, tagName string, fieldNames []string) (inter
 	}
 
 	if val.Kind() != reflect.Struct {
-		return nil, trace.NotFound("field name %v is not found", strings.Join(fieldNames, "."))
+		return nil, &notFoundError{fieldNames: fieldNames}
 	}
 	fieldName := fieldNames[0]
 	rest := fieldNames[1:]
@@ -151,7 +175,7 @@ func GetFieldByTag(ival interface{}, tagName string, fieldNames []string) (inter
 		// If it's an embedded field, traverse it.
 		if tagValue == "" && valType.Field(i).Anonymous {
 			value := val.Field(i).Interface()
-			val, err := GetFieldByTag(value, tagName, fieldNames)
+			val, err := getFieldByTag(value, tagName, fieldNames)
 			if err == nil {
 				return val, nil
 			}
@@ -164,9 +188,9 @@ func GetFieldByTag(ival interface{}, tagName string, fieldNames []string) (inter
 				return value, nil
 			}
 
-			return GetFieldByTag(value, tagName, rest)
+			return getFieldByTag(value, tagName, rest)
 		}
 	}
 
-	return nil, trace.NotFound("field name %v is not found", strings.Join(fieldNames, "."))
+	return nil, &notFoundError{fieldNames: fieldNames}
 }
