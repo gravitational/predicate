@@ -1,6 +1,6 @@
 module github.com/vulcand/predicate
 
-go 1.17
+go 1.18
 
 // we use a pseudo version for github.com/gravitational/trace
 // because the a bump of GRPC has been made in this package and can influence predicate clients.
