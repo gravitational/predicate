@@ -178,25 +178,24 @@ func getFieldByTag(val reflect.Value, tagName string, fieldNames []string) (inte
 
 	valType := val.Type()
 	for i := 0; i < valType.NumField(); i++ {
-		tagValue := valType.Field(i).Tag.Get(tagName)
+		fieldType := valType.Field(i)
+		tagValue := fieldType.Tag.Get(tagName)
 
 		// If it's an embedded field, traverse it.
-		if tagValue == "" && valType.Field(i).Anonymous {
+		if tagValue == "" && fieldType.Anonymous {
 			value := val.Field(i)
-			val, err := getFieldByTag(value, tagName, fieldNames)
-			if err == nil {
-				return val, nil
+			if valI, err := getFieldByTag(value, tagName, fieldNames); err == nil {
+				return valI, nil
 			}
 		}
 
-		parts := strings.Split(tagValue, ",")
-		if parts[0] == fieldName {
+		if tagFieldName, _, _ := strings.Cut(tagValue, ","); tagFieldName == fieldName {
 			value := val.Field(i)
 			if len(rest) == 0 {
 				if value.CanInterface() {
 					return value.Interface(), nil
 				}
-				return nil, trace.BadParameter("field %v is not accessible", fieldName)
+				return nil, &notFoundError{fieldNames: fieldNames}
 			}
 
 			return getFieldByTag(value, tagName, rest)
