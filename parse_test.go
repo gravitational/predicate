@@ -408,6 +408,37 @@ func (s *PredicateSuite) TestContains() {
 	s.False(pr.(BoolPredicate)())
 }
 
+func (s *PredicateSuite) TestContainsUnexportedFieldAvoidPanic() {
+	type embedTestStruct struct {
+		Param struct {
+			Key1 map[string][]string `json:"key1,omitempty"`
+			Key2 map[string]string   `json:"key2,omitempty"`
+		} `json:"param,omitempty"`
+	}
+	type LocalTestStruct struct {
+		embedTestStruct
+	}
+	val := LocalTestStruct{
+		embedTestStruct: embedTestStruct{
+			Param: struct {
+				Key1 map[string][]string "json:\"key1,omitempty\""
+				Key2 map[string]string   "json:\"key2,omitempty\""
+			}{
+				Key1: map[string][]string{"key": {"a", "b", "c"}},
+			},
+		},
+	}
+
+	getID := func(fields []string) (interface{}, error) {
+		return GetFieldByTag(val, "json", fields[1:])
+	}
+	p := s.getParserWithOpts(getID, GetStringMapValue)
+
+	pr, err := p.Parse(`Contains(val.param.key1["key"], "a")`)
+	s.NoError(err)
+	s.True(pr.(BoolPredicate)())
+}
+
 func (s *PredicateSuite) TestEquals() {
 	val := TestStruct{}
 	val.Param.Key2 = map[string]string{"key": "a"}
