@@ -131,7 +131,7 @@ func Not(a BoolPredicate) BoolPredicate {
 
 // GetFieldByTag returns a field from the object based on the tag.
 func GetFieldByTag(ival interface{}, tagName string, fieldNames []string) (interface{}, error) {
-	i, err := getFieldByTag(ival, tagName, fieldNames)
+	i, err := getFieldByTag(reflect.ValueOf(ival), tagName, fieldNames)
 	if err == nil {
 		return i, nil
 	}
@@ -161,12 +161,11 @@ func (n notFoundError) Error() string {
 	return fmt.Sprintf("field name %v is not found", strings.Join(n.fieldNames, "."))
 }
 
-func getFieldByTag(ival interface{}, tagName string, fieldNames []string) (interface{}, error) {
+func getFieldByTag(val reflect.Value, tagName string, fieldNames []string) (interface{}, error) {
 	if len(fieldNames) == 0 {
 		return nil, trace.BadParameter("missing field names")
 	}
 
-	val := reflect.ValueOf(ival)
 	if val.Kind() == reflect.Interface || val.Kind() == reflect.Ptr {
 		val = val.Elem()
 	}
@@ -183,7 +182,7 @@ func getFieldByTag(ival interface{}, tagName string, fieldNames []string) (inter
 
 		// If it's an embedded field, traverse it.
 		if tagValue == "" && valType.Field(i).Anonymous {
-			value := val.Field(i).Interface()
+			value := val.Field(i)
 			val, err := getFieldByTag(value, tagName, fieldNames)
 			if err == nil {
 				return val, nil
@@ -192,9 +191,12 @@ func getFieldByTag(ival interface{}, tagName string, fieldNames []string) (inter
 
 		parts := strings.Split(tagValue, ",")
 		if parts[0] == fieldName {
-			value := val.Field(i).Interface()
+			value := val.Field(i)
 			if len(rest) == 0 {
-				return value, nil
+				if value.CanInterface() {
+					return value.Interface(), nil
+				}
+				return nil, trace.BadParameter("field %v is not accessible", fieldName)
 			}
 
 			return getFieldByTag(value, tagName, rest)
