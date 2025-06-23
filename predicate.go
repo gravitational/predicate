@@ -65,9 +65,9 @@ package predicate
 type Def struct {
 	Operators Operators
 	// Function matching is case sensitive, e.g. Len is different from len
-	Functions map[string]interface{}
+	Functions map[string]any
 	// Methods is a map of method names to their implementation.
-	Methods map[string]interface{}
+	Methods map[string]any
 	// GetIdentifier returns value of any identifier passed in the form
 	// []string{"id", "field", "subfield"}
 	GetIdentifier GetIdentifierFn
@@ -78,28 +78,28 @@ type Def struct {
 // GetIdentifierFn function returns identifier based on selector
 // e.g. id.field.subfield will be passed as.
 // GetIdentifierFn([]string{"id", "field", "subfield"}).
-type GetIdentifierFn func(selector []string) (interface{}, error)
+type GetIdentifierFn func(selector []string) (any, error)
 
 // GetPropertyFn returns property from a mapVal by key keyVal.
-type GetPropertyFn func(mapVal, keyVal interface{}) (interface{}, error)
+type GetPropertyFn func(mapVal, keyVal any) (any, error)
 
 // Operators contain functions for equality and logical comparison.
 type Operators struct {
-	EQ  interface{}
-	NEQ interface{}
+	EQ  any
+	NEQ any
 
-	LT interface{}
-	GT interface{}
+	LT any
+	GT any
 
-	LE interface{}
-	GE interface{}
+	LE any
+	GE any
 
-	OR  interface{}
-	AND interface{}
-	NOT interface{}
+	OR  any
+	AND any
+	NOT any
 }
 
 // Parser takes the string with expression and calls the operators and functions.
 type Parser interface {
-	Parse(string) (interface{}, error)
+	Parse(string) (any, error)
 }

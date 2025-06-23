@@ -11,17 +11,17 @@ func TestMethods(t *testing.T) {
 	t.Parallel()
 
 	p, err := NewParser(Def{
-		Functions: map[string]interface{}{
+		Functions: map[string]any{
 			"set":    newSet,
 			"list":   newList,
 			"append": customAppend,
 		},
-		Methods: map[string]interface{}{
+		Methods: map[string]any{
 			"add":      set.add,
 			"append":   list.append,
 			"contains": container.contains,
 		},
-		GetIdentifier: func(selector []string) (interface{}, error) {
+		GetIdentifier: func(selector []string) (any, error) {
 			if len(selector) == 1 && selector[0] == "fruits" {
 				return newSet("apples", "bananas"), nil
 			}
@@ -34,7 +34,7 @@ func TestMethods(t *testing.T) {
 		desc         string
 		input        string
 		expectError  bool
-		expectOutput interface{}
+		expectOutput any
 	}{
 		{
 			desc:         "basic method call",
