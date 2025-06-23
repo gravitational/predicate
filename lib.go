@@ -29,7 +29,7 @@ import (
 // from map[string]string or map[string][]string
 // the function returns empty value in case if key not found
 // In case if map is nil, returns empty value as well.
-func GetStringMapValue(mapVal, keyVal interface{}) (interface{}, error) {
+func GetStringMapValue(mapVal, keyVal any) (any, error) {
 	key, ok := keyVal.(string)
 	if !ok {
 		return nil, trace.BadParameter("only string keys are supported")
@@ -58,7 +58,7 @@ type BoolPredicate func() bool
 
 // Equals can compare complex objects, e.g. arrays of strings
 // and strings together.
-func Equals(a interface{}, b interface{}) BoolPredicate {
+func Equals(a any, b any) BoolPredicate {
 	return func() bool {
 		switch aval := a.(type) {
 		case string:
@@ -86,7 +86,7 @@ func Equals(a interface{}, b interface{}) BoolPredicate {
 
 // Contains checks if string slice contains a string
 // Contains([]string{"a", "b"}, "b") -> true.
-func Contains(a interface{}, b interface{}) BoolPredicate {
+func Contains(a any, b any) BoolPredicate {
 	return func() bool {
 		aval, ok := a.([]string)
 		if !ok {
@@ -130,7 +130,7 @@ func Not(a BoolPredicate) BoolPredicate {
 }
 
 // GetFieldByTag returns a field from the object based on the tag.
-func GetFieldByTag(ival interface{}, tagName string, fieldNames []string) (interface{}, error) {
+func GetFieldByTag(ival any, tagName string, fieldNames []string) (any, error) {
 	i, err := getFieldByTag(reflect.ValueOf(ival), tagName, fieldNames)
 	if err == nil {
 		return i, nil
@@ -161,7 +161,7 @@ func (n notFoundError) Error() string {
 	return fmt.Sprintf("field name %v is not found", strings.Join(n.fieldNames, "."))
 }
 
-func getFieldByTag(val reflect.Value, tagName string, fieldNames []string) (interface{}, error) {
+func getFieldByTag(val reflect.Value, tagName string, fieldNames []string) (any, error) {
 	if len(fieldNames) == 0 {
 		return nil, trace.BadParameter("missing field names")
 	}
