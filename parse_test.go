@@ -439,6 +439,55 @@ func (s *PredicateSuite) TestContainsUnexportedFieldAvoidPanic() {
 	s.True(pr.(BoolPredicate)())
 }
 
+func (s *PredicateSuite) TestContainsInterfacePTR() {
+	type LocalTestStruct struct {
+		Param struct {
+			Key1 map[string][]string `json:"key1,omitempty"`
+			Key2 map[string]string   `json:"key2,omitempty"`
+		} `json:"param,omitempty"`
+	}
+	val := LocalTestStruct{
+		Param: struct {
+			Key1 map[string][]string "json:\"key1,omitempty\""
+			Key2 map[string]string   "json:\"key2,omitempty\""
+		}{
+			Key1: map[string][]string{"key": {"a", "b", "c"}},
+		},
+	}
+
+	type testInterface interface{}
+
+	var iface testInterface = &val // Use a pointer to the struct
+
+	getID := func(fields []string) (interface{}, error) {
+		return GetFieldByTag(iface, "json", fields[1:])
+	}
+	p := s.getParserWithOpts(getID, GetStringMapValue)
+
+	pr, err := p.Parse(`Contains(val.param.key1["key"], "a")`)
+	s.NoError(err)
+	s.True(pr.(BoolPredicate)())
+}
+
+func (s *PredicateSuite) TestNilInterfaceContentCheck() {
+	type LocalTestStruct struct {
+		Param struct {
+			Key1 map[string][]string `json:"key1,omitempty"`
+			Key2 map[string]string   `json:"key2,omitempty"`
+		} `json:"param,omitempty"`
+	}
+
+	var iface any = (*LocalTestStruct)(nil) // Use a nil pointer to the struct
+
+	getID := func(fields []string) (interface{}, error) {
+		return GetFieldByTag(iface, "json", fields[1:])
+	}
+	p := s.getParserWithOpts(getID, GetStringMapValue)
+
+	_, err := p.Parse(`Contains(val.param.key1["key"], "a")`)
+	s.Error(err)
+}
+
 func (s *PredicateSuite) TestEquals() {
 	val := TestStruct{}
 	val.Param.Key2 = map[string]string{"key": "a"}

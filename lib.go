@@ -166,7 +166,10 @@ func getFieldByTag(val reflect.Value, tagName string, fieldNames []string) (any,
 		return nil, trace.BadParameter("missing field names")
 	}
 
-	if val.Kind() == reflect.Interface || val.Kind() == reflect.Ptr {
+	for val.Kind() == reflect.Interface || val.Kind() == reflect.Ptr {
+		if val.IsNil() {
+			return nil, &notFoundError{fieldNames: fieldNames}
+		}
 		val = val.Elem()
 	}
 
