@@ -13,6 +13,10 @@ import (
 )
 
 func NewParser(d Def) (Parser, error) {
+	return NewASTParser(d)
+}
+
+func NewASTParser(d Def) (ASTParser, error) {
 	return &predicateParser{d: d}, nil
 }
 
@@ -26,6 +30,10 @@ func (p *predicateParser) Parse(in string) (any, error) {
 		return nil, err
 	}
 
+	return p.ParseAST(expr)
+}
+
+func (p *predicateParser) ParseAST(expr ast.Expr) (any, error) {
 	return p.parse(expr)
 }
 
