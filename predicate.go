@@ -60,6 +60,8 @@ Here's an example of fully functional predicate language to deal with division r
 */
 package predicate
 
+import "go/ast"
+
 // Def defines parser context including supported operators, functions, methods,
 // identifiers, and property accessors.
 type Def struct {
@@ -102,4 +104,11 @@ type Operators struct {
 // Parser takes the string with expression and calls the operators and functions.
 type Parser interface {
 	Parse(string) (any, error)
+}
+
+// ASTParser is just like [Parser] but it lets the caller pass an [ast.Expr]
+// object rather than an expression in string form.
+type ASTParser interface {
+	Parser
+	ParseAST(ast.Expr) (any, error)
 }
