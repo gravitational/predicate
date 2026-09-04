@@ -1,6 +1,7 @@
 package predicate
 
 import (
+	"slices"
 	"testing"
 
 	"github.com/gravitational/trace"
@@ -137,12 +138,7 @@ func newList(strings ...string) list {
 }
 
 func (l list) contains(str string) bool {
-	for _, s := range l {
-		if s == str {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(l, str)
 }
 
 func (l list) append(str string) list {

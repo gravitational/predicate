@@ -416,7 +416,7 @@ func (s *PredicateSuite) TestContainsUnexportedFieldAvoidPanic() {
 		Param struct {
 			Key1 map[string][]string `json:"key1,omitempty"`
 			Key2 map[string]string   `json:"key2,omitempty"`
-		} `json:"param,omitempty"`
+		} `json:"param"`
 	}
 	type LocalTestStruct struct {
 		embedTestStruct
@@ -447,7 +447,7 @@ func (s *PredicateSuite) TestContainsInterfacePTR() {
 		Param struct {
 			Key1 map[string][]string `json:"key1,omitempty"`
 			Key2 map[string]string   `json:"key2,omitempty"`
-		} `json:"param,omitempty"`
+		} `json:"param"`
 	}
 	val := LocalTestStruct{
 		Param: struct {
@@ -458,11 +458,11 @@ func (s *PredicateSuite) TestContainsInterfacePTR() {
 		},
 	}
 
-	type testInterface interface{}
+	type testInterface any
 
 	var iface testInterface = &val // Use a pointer to the struct
 
-	getID := func(fields []string) (interface{}, error) {
+	getID := func(fields []string) (any, error) {
 		return GetFieldByTag(iface, "json", fields[1:])
 	}
 	p := s.getParserWithOpts(getID, GetStringMapValue)
@@ -477,12 +477,12 @@ func (s *PredicateSuite) TestNilInterfaceContentCheck() {
 		Param struct {
 			Key1 map[string][]string `json:"key1,omitempty"`
 			Key2 map[string]string   `json:"key2,omitempty"`
-		} `json:"param,omitempty"`
+		} `json:"param"`
 	}
 
 	var iface any = (*LocalTestStruct)(nil) // Use a nil pointer to the struct
 
-	getID := func(fields []string) (interface{}, error) {
+	getID := func(fields []string) (any, error) {
 		return GetFieldByTag(iface, "json", fields[1:])
 	}
 	p := s.getParserWithOpts(getID, GetStringMapValue)
@@ -521,7 +521,7 @@ type TestEmbedStruct struct {
 	EmbedParam struct {
 		EmbedKey1 map[string][]string `json:"embed_key1,omitempty"`
 		EmbedKey2 map[string]string   `json:"embed_key2,omitempty"`
-	} `json:"embed_param,omitempty"`
+	} `json:"embed_param"`
 }
 
 // TestStruct is a test structure with json tags.
@@ -530,7 +530,7 @@ type TestStruct struct {
 	Param struct {
 		Key1 map[string][]string `json:"key1,omitempty"`
 		Key2 map[string]string   `json:"key2,omitempty"`
-	} `json:"param,omitempty"`
+	} `json:"param"`
 }
 
 func (s *PredicateSuite) TestGetTagField() {

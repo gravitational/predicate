@@ -20,6 +20,7 @@ import (
 	"errors"
 	"fmt"
 	"reflect"
+	"slices"
 	"strings"
 
 	"github.com/gravitational/trace"
@@ -96,12 +97,7 @@ func Contains(a any, b any) BoolPredicate {
 		if !ok {
 			return false
 		}
-		for _, v := range aval {
-			if v == bval {
-				return true
-			}
-		}
-		return false
+		return slices.Contains(aval, bval)
 	}
 }
 
@@ -145,8 +141,7 @@ func GetFieldByTag(ival any, tagName string, fieldNames []string) (any, error) {
 	// must however convert a notFoundError into a [trace.NotFoundError].
 	//
 	// See https://github.com/gravitational/teleport/issues/27228.
-	var nfe *notFoundError
-	if errors.As(err, &nfe) {
+	if nfe, ok := errors.AsType[*notFoundError](err); ok {
 		return nil, trace.NotFound("%s", nfe.Error())
 	}
 
@@ -166,7 +161,7 @@ func getFieldByTag(val reflect.Value, tagName string, fieldNames []string) (any,
 		return nil, trace.BadParameter("missing field names")
 	}
 
-	for val.Kind() == reflect.Interface || val.Kind() == reflect.Ptr {
+	for val.Kind() == reflect.Interface || val.Kind() == reflect.Pointer {
 		if val.IsNil() {
 			return nil, &notFoundError{fieldNames: fieldNames}
 		}
