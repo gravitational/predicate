@@ -1,68 +1,91 @@
-run:
-  timeout: 5m
-  skip-files: []
-
-linters-settings:
-  govet:
-    check-shadowing: true
-  gocyclo:
-    min-complexity: 20
-  goconst:
-    min-len: 5
-    min-occurrences: 3
-  misspell:
-    locale: US
-  funlen:
-    lines: -1
-    statements: 50
-
+version: "2"
 linters:
-  enable-all: true
+  default: all
   disable:
-    - scopelint # deprecated
-    - interfacer # deprecated
-    - maligned # deprecated
-    - golint # deprecated
-    - exhaustivestruct # deprecated
-    - scopelint # deprecated
-    - varcheck # deprecated
-    - structcheck # deprecated
-    - nosnakecase # deprecated
-    - deadcode # deprecated
-    - ifshort # deprecated
-    - sqlclosecheck # not relevant (SQL)
-    - rowserrcheck # not relevant (SQL)
-    - cyclop # duplicate of gocyclo
-    - lll
+    - cyclop
+    - depguard # no allowlist configured; v2 default denies all non-stdlib
     - dupl
-    - wsl
-    - nlreturn
-    - gomnd
-    - goerr113
-    - wrapcheck
+    - err113
     - exhaustive
     - exhaustruct
-    - testpackage
-    - tparallel
+    - exhaustruct_v5 # v2 successor of exhaustruct
+    - forcetypeassert
+    - gomodguard # deprecated; superseded by gomodguard_v2, which stays enabled
+    - ireturn
+    - lll
+    - mnd
+    - nilnil
+    - nlreturn
+    - nonamedreturns
     - paralleltest
     - prealloc
-    - ifshort
-    - forcetypeassert
+    - rowserrcheck
+    - sqlclosecheck
+    - testpackage
+    - tparallel
     - varnamelen
-    - nilnil
-    - ireturn
-    - nonamedreturns
-
+    - wrapcheck
+    # New in golangci-lint v2; findings deferred to a follow-up PR to keep
+    # the upgrade config-only.
+    - embeddedstructfieldcheck
+    - funcorder
+    - inamedparam
+    - intrange
+    - modernize
+    - noinlineerr
+    - perfsprint
+    - tagalign
+    - testifylint
+    - wsl
+    - wsl_v5 # v2 successor of wsl
+  settings:
+    funlen:
+      lines: -1
+      statements: 50
+    goconst:
+      min-len: 5
+      min-occurrences: 3
+    gocyclo:
+      min-complexity: 20
+    govet:
+      enable:
+        - shadow
+      disable:
+        - inline # new in v2; findings deferred with the linters above
+    misspell:
+      locale: US
+  exclusions:
+    generated: lax
+    rules:
+      - linters:
+          - funlen
+          - goconst
+          - tagliatelle
+        path: (.+)_test.go
+      - path: (.+)\.go$
+        text: Error return value of .((os\.)?std(out|err)\..*|.*Close|.*Flush|os\.Remove(All)?|.*printf?|os\.(Un)?Setenv). is not checked
+      - path: (.+)\.go$
+        text: exported (type|method|function) (.+) should have comment or be unexported
+      # revive's unused-parameter is newly enabled under v2's default ruleset.
+      - linters:
+          - revive
+        text: unused-parameter
+    paths:
+      - third_party$
+      - builtin$
+      - examples$
 issues:
-  exclude-use-default: false
-  max-per-linter: 0
+  max-issues-per-linter: 0
   max-same-issues: 0
-  exclude:
-    - "Error return value of .((os\\.)?std(out|err)\\..*|.*Close|.*Flush|os\\.Remove(All)?|.*printf?|os\\.(Un)?Setenv). is not checked"
-    - "exported (type|method|function) (.+) should have comment or be unexported"
-  exclude-rules:
-    - path: (.+)_test.go
-      linters:
-        - funlen
-        - goconst
-        - tagliatelle
+formatters:
+  enable:
+    - gci
+    - gofmt
+    - gofumpt
+    - goimports
+  exclusions:
+    generated: lax
+    paths:
+      - third_party$
+      - builtin$
+      - examples$

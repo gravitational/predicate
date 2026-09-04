@@ -165,7 +165,6 @@ func (p *predicateParser) parseSelectorExpr(expr *ast.SelectorExpr) (any, error)
 // evaluateSelector evaluates the selector field and returns a list of properties
 // at the end.
 func evaluateSelector(sel *ast.SelectorExpr, fields []string) ([]string, error) {
-
 	// Collect the fields in reverse order so we don't have to prepend to a slice.
 	// (Each prepend means copying the entire slice.)
 	var reversed []string
