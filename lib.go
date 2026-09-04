@@ -147,7 +147,7 @@ func GetFieldByTag(ival any, tagName string, fieldNames []string) (any, error) {
 	// See https://github.com/gravitational/teleport/issues/27228.
 	var nfe *notFoundError
 	if errors.As(err, &nfe) {
-		return nil, trace.NotFound(nfe.Error())
+		return nil, trace.NotFound("%s", nfe.Error())
 	}
 
 	return nil, trace.Wrap(err)

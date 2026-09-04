@@ -6,6 +6,7 @@ import (
 	"go/parser"
 	"go/token"
 	"reflect"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -161,20 +162,27 @@ func (p *predicateParser) parseSelectorExpr(expr *ast.SelectorExpr) (any, error)
 	return val, nil
 }
 
-// evaluateSelector recursively evaluates the selector field and returns a list
-// of properties at the end.
+// evaluateSelector evaluates the selector field and returns a list of properties
+// at the end.
 func evaluateSelector(sel *ast.SelectorExpr, fields []string) ([]string, error) {
-	fields = append([]string{sel.Sel.Name}, fields...)
-	switch l := sel.X.(type) {
-	case *ast.SelectorExpr:
-		return evaluateSelector(l, fields)
 
-	case *ast.Ident:
-		fields = append([]string{l.Name}, fields...)
-		return fields, nil
+	// Collect the fields in reverse order so we don't have to prepend to a slice.
+	// (Each prepend means copying the entire slice.)
+	var reversed []string
+	for {
+		reversed = append(reversed, sel.Sel.Name)
+		switch l := sel.X.(type) {
+		case *ast.SelectorExpr:
+			sel = l
 
-	default:
-		return nil, trace.BadParameter("unsupported selector type: %T", l)
+		case *ast.Ident:
+			reversed = append(reversed, l.Name)
+			slices.Reverse(reversed)
+			return append(reversed, fields...), nil
+
+		default:
+			return nil, trace.BadParameter("unsupported selector type: %T", l)
+		}
 	}
 }
 

@@ -1,6 +1,6 @@
 module github.com/vulcand/predicate
 
-go 1.18
+go 1.26
 
 require (
 	github.com/gravitational/trace v1.5.0
