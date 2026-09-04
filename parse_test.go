@@ -2,6 +2,9 @@ package predicate
 
 import (
 	"fmt"
+	"go/ast"
+	"go/parser"
+	"strings"
 	"testing"
 
 	"github.com/gravitational/trace"
@@ -773,6 +776,101 @@ func TestNestedExpressions(t *testing.T) {
 			}
 
 			require.Equal(t, tc.expected, result)
+		})
+	}
+}
+
+// selectorExpr parses expr and asserts that it is a selector expression.
+func selectorExpr(tb testing.TB, expr string) *ast.SelectorExpr {
+	tb.Helper()
+
+	parsed, err := parser.ParseExpr(expr)
+	require.NoError(tb, err)
+
+	sel, ok := parsed.(*ast.SelectorExpr)
+	require.True(tb, ok, "expected *ast.SelectorExpr, got %T", parsed)
+
+	return sel
+}
+
+// buildSelector builds a selector expression of n dot-separated components.
+func buildSelector(n int) string {
+	return strings.TrimSuffix(strings.Repeat("a.", n), ".")
+}
+
+func TestEvaluateSelector(t *testing.T) {
+	t.Parallel()
+
+	for _, tc := range []struct {
+		desc     string
+		expr     string
+		fields   []string
+		expected []string
+	}{
+		{
+			desc:     "two components",
+			expr:     "a.b",
+			fields:   []string{},
+			expected: []string{"a", "b"},
+		},
+		{
+			desc:     "three components",
+			expr:     "a.b.c",
+			fields:   []string{},
+			expected: []string{"a", "b", "c"},
+		},
+		{
+			desc:     "existing fields are appended after the selector",
+			expr:     "a.b.c",
+			fields:   []string{"d", "e"},
+			expected: []string{"a", "b", "c", "d", "e"},
+		},
+		{
+			desc:     "nil fields",
+			expr:     "a.b.c",
+			fields:   nil,
+			expected: []string{"a", "b", "c"},
+		},
+	} {
+		t.Run(tc.desc, func(t *testing.T) {
+			fields, err := evaluateSelector(selectorExpr(t, tc.expr), tc.fields)
+			require.NoError(t, err)
+			require.Equal(t, tc.expected, fields)
+		})
+	}
+}
+
+func TestEvaluateSelectorLongChain(t *testing.T) {
+	t.Parallel()
+
+	const components = 10000
+
+	fields, err := evaluateSelector(selectorExpr(t, buildSelector(components)), []string{})
+	require.NoError(t, err)
+	require.Len(t, fields, components)
+
+	for i, f := range fields {
+		require.Equal(t, "a", f, "unexpected component at index %d", i)
+	}
+}
+
+func BenchmarkEvaluateSelector(b *testing.B) {
+	for _, components := range []int{10, 1000, 25000} {
+		b.Run(fmt.Sprintf("components=%d", components), func(b *testing.B) {
+			sel := selectorExpr(b, buildSelector(components))
+
+			b.ReportAllocs()
+			b.ResetTimer()
+
+			for i := 0; i < b.N; i++ {
+				fields, err := evaluateSelector(sel, []string{})
+				if err != nil {
+					b.Fatal(err)
+				}
+				if len(fields) != components {
+					b.Fatalf("got %d fields, want %d", len(fields), components)
+				}
+			}
 		})
 	}
 }
